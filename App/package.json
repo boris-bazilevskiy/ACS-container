@@ -1,0 +1,20 @@
+{
+  "name": "calling-app---boris",
+  "version": "1.0.0",
+  "description": "",
+  "main": "calling-client.js",
+  "scripts": {
+    "start": "parcel index.html"
+  },
+  "keywords": [],
+  "author": "Boris",
+  "license": "ISC",
+  "dependencies": {
+    "@azure/communication-calling": "^1.6.3",
+    "@azure/communication-common": "^2.2.0",
+    "@azure/communication-identity": "^1.2.0"
+  },
+  "devDependencies": {
+    "parcel": "^2.8.0"
+  }
+}
