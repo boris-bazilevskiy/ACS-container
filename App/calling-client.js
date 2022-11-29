@@ -44,9 +44,8 @@ console.log(token)
 
 // Create CallAgent
 const callClient = new CallClient();
-const returnedToken = await token;
 const callerName = callerNameInput.value;
-const tokenCredential = new AzureCommunicationTokenCredential(returnedToken);
+const tokenCredential = new AzureCommunicationTokenCredential(token);
 callAgent = await callClient.createCallAgent(tokenCredential, { displayName: callerName });
 console.log(callAgent);
 });
