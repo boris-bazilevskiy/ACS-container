@@ -1,6 +1,11 @@
 const { CommunicationIdentityClient } = require('@azure/communication-identity');
 import { CallClient, CallAgent } from "@azure/communication-calling";
 import { AzureCommunicationTokenCredential } from '@azure/communication-common';
+
+//Enable logging
+import { setLogLevel } from '@azure/logger';
+setLogLevel('verbose');
+
 let call;
 let callAgent;
 console.log("Azure Communication Services - Boris' Calling App")
