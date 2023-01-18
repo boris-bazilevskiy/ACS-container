@@ -61,8 +61,9 @@ callPhoneButton.addEventListener("click", () => {
     const phoneToCall = calleePhoneInput.value;
     const callerId = callerIdInput.value;
     call = callAgent.startCall(
-      [{phoneNumber: phoneToCall}], { alternateCallerId: {phoneNumber: callerId}
-    });
+    //remove alternateCallerId part if not specified in input
+      [{phoneNumber: phoneToCall}], callerId ? { alternateCallerId: {phoneNumber: callerId}} : null
+    );
     // toggle button states
     hangUpPhoneButton.disabled = false;
     callPhoneButton.disabled = true;
