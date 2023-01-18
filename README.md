@@ -18,4 +18,4 @@ This application can make calls to a telephone number using [ACS Client Calling 
 
 ## Notes
 
-You can also run it locally using `npm install` and `npm start`
+You can also run it locally using `npm install` and `npm start`.
