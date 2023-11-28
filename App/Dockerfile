@@ -2,7 +2,8 @@
 FROM alpine:latest
 RUN apk update &&\
     apk upgrade &&\
-    apk add nodejs npm
+    apk add nodejs npm &&\
+    chown -R root:root /home
 # Install app dependencies
 WORKDIR /App
 COPY package*.json ./
