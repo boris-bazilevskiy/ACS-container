@@ -1,12 +1,17 @@
-# syntax=docker/dockerfile:1
-FROM alpine:latest
-RUN apk update &&\
-    apk upgrade &&\
-    apk add nodejs npm
-# Install app dependencies
-WORKDIR /App
+# --- Build stage ---
+FROM node:24-alpine AS builder
+WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
+RUN npm run build
+
+# --- Runtime stage ---
+FROM node:24-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY server.js .
+COPY --from=builder /app/dist ./dist
 EXPOSE 1234
-CMD [ "npm", "start" ]
+CMD ["node", "server.js"]

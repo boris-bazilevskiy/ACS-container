@@ -1,81 +1,105 @@
-const { CommunicationIdentityClient } = require('@azure/communication-identity');
-import { CallClient, CallAgent } from "@azure/communication-calling";
-import { AzureCommunicationTokenCredential } from '@azure/communication-common';
+import { CallClient } from "@azure/communication-calling";
+import { AzureCommunicationTokenCredential } from "@azure/communication-common";
 
-//Enable logging
-import { setLogLevel } from '@azure/logger';
-setLogLevel('verbose');
-
-let call;
 let callAgent;
-console.log("Azure Communication Services - Boris' Calling App")
+let deviceManager;
+let call;
+let cachedToken;
 
-// Inputs and buttons
-const callerNameInput = document.getElementById("caller-name-input");
-const generateIdButton = document.getElementById("generate-id-button");
-const callerIdInput = document.getElementById("caller-id-input");
-const calleePhoneInput = document.getElementById("callee-phone-input");
-const callPhoneButton = document.getElementById("call-phone-button");
-const hangUpPhoneButton = document.getElementById("hang-up-phone-button");
+async function getAcsToken() {
+  const response = await fetch("/token");
 
-// This code demonstrates how to fetch your connection string
-// from an environment variable.
-const connectionString = process.env['COMMUNICATION_SERVICES_CONNECTION_STRING'];
-const identityClient = new CommunicationIdentityClient(connectionString);
+  if (!response.ok) {
+    throw new Error(await response.text());
+  }
 
-// Instantiate the identity client
-// Issue an access token with a validity of 24 hours and the "voip" scope for an identity
+  return response.json();
+}
 
-generateIdButton.addEventListener("click", async () => {
-let identityResponse = await identityClient.createUser();
-let tokenResponse = await identityClient.getToken(identityResponse, ["voip"]);
-  console.log(`\nCreated an identity with ID: ${identityResponse.communicationUserId}`);
+async function init() {
+  try {
+    const { token, userId } = await getAcsToken();
 
+    cachedToken = token;
 
-const { token, expiresOn } = tokenResponse;
+    document.getElementById("user-id-output").value = userId;
 
-let output1 = document.querySelector('.output1');
-let output2 = document.querySelector('.output2');
-let output3 = document.querySelector('.output3');
+    const callClient = new CallClient();
 
-output1.textContent = (`Created an identity with ID: ${identityResponse.communicationUserId}`); 
+    deviceManager = await callClient.getDeviceManager();
+    await deviceManager.askDevicePermission({ audio: true, video: false });
 
-output2.textContent = (`Issued an access token with 'voip' scope that expires at ${expiresOn}`);
+    const tokenCredential = new AzureCommunicationTokenCredential(token);
 
-output3.textContent = (`Token: ${token}`);
+    callAgent = await callClient.createCallAgent(tokenCredential);
 
-console.log(`\nIssued an access token with 'voip' scope that expires at ${expiresOn}:`);
-console.log(token)
+    setupUI();
+  } catch (err) {
+    console.error("Init failed:", err);
+    alert(err.message || err);
+  }
+}
 
-// Create CallAgent
-const callClient = new CallClient();
-const callerName = callerNameInput.value;
-const tokenCredential = new AzureCommunicationTokenCredential(token);
-callAgent = await callClient.createCallAgent(tokenCredential, { displayName: callerName });
-console.log(callAgent);
-});
+function setupUI() {
+  const callButton = document.getElementById("callButton");
+  const hangUpButton = document.getElementById("hangUpButton");
 
-// Make call
-callPhoneButton.addEventListener("click", () => {
-    // start a call to phone
-    const phoneToCall = calleePhoneInput.value;
-    const callerId = callerIdInput.value;
-    call = callAgent.startCall(
-    //remove alternateCallerId part if not specified in input
-      [{phoneNumber: phoneToCall}], callerId ? { alternateCallerId: {phoneNumber: callerId}} : null
-    );
-    // toggle button states
-    hangUpPhoneButton.disabled = false;
-    callPhoneButton.disabled = true;
-  });
+  callButton.onclick = async () => {
+    const callee = document.getElementById("callee-id-input").value.trim();
+    const callerId = document.getElementById("caller-id-input").value.trim();
+    const callerName =
+      document.getElementById("caller-name-input").value.trim() || "ACS User";
 
-  hangUpPhoneButton.addEventListener("click", () => {
-    // end the current call
-    call.hangUp({
-      forEveryone: true
-    });
-  
-    // toggle button states
-    hangUpPhoneButton.disabled = true;
-    callPhoneButton.disabled = false;
-  });
+    if (!callee) {
+      alert("Enter callee");
+      return;
+    }
+
+    try {
+      // recreate agent if caller name or ID changes
+      if (callAgent) {
+        await callAgent.dispose();
+      }
+
+      const callClient = new CallClient();
+      const tokenCredential = new AzureCommunicationTokenCredential(cachedToken);
+
+      callAgent = await callClient.createCallAgent(tokenCredential, {
+        displayName: callerName
+      });
+
+      let callOptions = {};
+
+      // PSTN caller ID (IMPORTANT)
+      if (callerId) {
+        callOptions = {
+          alternateCallerId: { phoneNumber: callerId }
+        };
+      }
+
+      const target = callee.startsWith("8:acs:")
+        ? { communicationUserId: callee }
+        : { phoneNumber: callee };
+
+      call = callAgent.startCall([target], callOptions);
+
+      console.log("Call started");
+    } catch (err) {
+      console.error("Call failed:", err);
+      alert(err.message || err);
+    }
+  };
+
+  hangUpButton.onclick = async () => {
+    if (!call) return;
+
+    try {
+      await call.hangUp({ forEveryone: false });
+      call = undefined;
+    } catch (err) {
+      console.error("Hangup failed:", err);
+    }
+  };
+}
+
+init();
