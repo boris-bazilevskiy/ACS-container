@@ -1,12 +1,11 @@
 # syntax=docker/dockerfile:1
-FROM alpine:latest
-RUN apk update &&\
-    apk upgrade &&\
-    apk add nodejs npm
-# Install app dependencies
+# Multi-arch: build with --platform linux/amd64,linux/arm64
+# Runs on Linux hosts and Windows Docker Desktop (Linux containers mode)
+FROM node:lts-alpine
+RUN apk update && apk upgrade --no-cache
 WORKDIR /App
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
 EXPOSE 1234
-CMD [ "npm", "start" ]
+CMD ["npm", "start"]
